@@ -28,7 +28,7 @@ const initialArtisans: Artisan[] = [
     rating: 4.8,
     reviews: 156,
     verified: true,
-    avatar: '/avatars/john.jpg',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face&auto=format',
     joinedDate: '2024-01-15',
     totalSales: 25000,
     bio: 'Specialized in organic vegetable farming with over 10 years of experience.'
@@ -43,7 +43,7 @@ const initialArtisans: Artisan[] = [
     rating: 4.9,
     reviews: 203,
     verified: true,
-    avatar: '/avatars/mary.jpg',
+    avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face&auto=format',
     joinedDate: '2024-02-20',
     totalSales: 35000,
     bio: 'Expert in poultry farming and egg production with sustainable practices.'
@@ -58,7 +58,7 @@ const initialArtisans: Artisan[] = [
     rating: 4.7,
     reviews: 89,
     verified: false,
-    avatar: '/avatars/peter.jpg',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face&auto=format',
     joinedDate: '2024-03-10',
     totalSales: 18000,
     bio: 'Traditional rice farmer using modern techniques for better yield.'
