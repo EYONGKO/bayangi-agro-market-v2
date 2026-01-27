@@ -3,10 +3,30 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Package, Search, Star, MapPin, Award } from 'lucide-react';
 import PageLayout from '../components/PageLayout';
 import { theme } from '../theme/colors';
-import { getArtisans } from '../data/artisansStore';
-import { getImageUrl } from '../data/imageStorage';
 import ArtisanProfileModal from '../components/ArtisanProfileModal';
-import type { Artisan } from '../data/artisansStore';
+
+// API types
+interface ArtisanStats {
+  totalProducts: number;
+  avgRating: number;
+  totalLikes: number;
+  reviews: number;
+}
+
+interface Artisan {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  community: string;
+  specialty: string;
+  role: string;
+  verifiedSeller: boolean;
+  avatar: string;
+  bio: string;
+  createdAt: string;
+  stats: ArtisanStats;
+}
 
 const TopArtisansPage = () => {
   const navigate = useNavigate();
@@ -19,12 +39,27 @@ const TopArtisansPage = () => {
   const [selectedArtisan, setSelectedArtisan] = useState<Artisan | null>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
 
-  // Load artisans from store on component mount
+  // Load artisans from backend API on component mount
   useEffect(() => {
-    setArtisans(getArtisans());
+    const fetchArtisans = async () => {
+      try {
+        const apiUrl = 'https://bayangi-agro-market-backend-production.up.railway.app/api/artisans';
+        const response = await fetch(apiUrl);
+        if (response.ok) {
+          const data = await response.json();
+          setArtisans(data);
+        } else {
+          console.error('Failed to fetch artisans:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Error fetching artisans:', error);
+      }
+    };
+
+    fetchArtisans();
   }, []);
 
-  // Listen for artisans updates from admin panel
+  // Listen for artisans updates from admin panel (for real-time updates)
   useEffect(() => {
     const handleArtisansUpdate = (event: CustomEvent) => {
       setArtisans(event.detail);
@@ -189,7 +224,10 @@ const TopArtisansPage = () => {
                     {/* Profile Image */}
                     {artisan.avatar ? (
                       <img 
-                        src={getImageUrl(artisan.avatar)} 
+                        src={artisan.avatar.startsWith('http') || artisan.avatar.startsWith('/') 
+                          ? artisan.avatar 
+                          : `https://bayangi-agro-market-backend-production.up.railway.app/uploads/${artisan.avatar}`
+                        } 
                         alt={artisan.name}
                         className="w-full h-full object-cover"
                       />
@@ -212,7 +250,7 @@ const TopArtisansPage = () => {
                           </div>
                           
                           {/* Verified Badge */}
-                          {artisan.verified && (
+                          {artisan.verifiedSeller && (
                             <div className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
                               <Award size={12} />
                               Verified
@@ -232,8 +270,8 @@ const TopArtisansPage = () => {
                       </div>
                       <div className="flex items-center gap-1">
                         <Star size={16} className="text-yellow-500 fill-current" />
-                        <span className="font-bold text-gray-900">{artisan.rating}</span>
-                        <span className="text-gray-500 text-sm">({artisan.reviews})</span>
+                        <span className="font-bold text-gray-900">{artisan.stats.avgRating}</span>
+                        <span className="text-gray-500 text-sm">({artisan.stats.reviews})</span>
                       </div>
                     </div>
                     
@@ -246,13 +284,13 @@ const TopArtisansPage = () => {
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div className="text-center p-3 bg-gray-50 rounded-lg">
                         <div className="text-lg font-bold text-green-600">
-                          {artisan.totalSales.toLocaleString()}
+                          {artisan.stats.totalProducts}
                         </div>
-                        <div className="text-xs text-gray-500">Total Sales</div>
+                        <div className="text-xs text-gray-500">Products</div>
                       </div>
                       <div className="text-center p-3 bg-gray-50 rounded-lg">
                         <div className="text-lg font-bold text-blue-600">
-                          {artisan.reviews}
+                          {artisan.stats.reviews}
                         </div>
                         <div className="text-xs text-gray-500">Reviews</div>
                       </div>
@@ -293,7 +331,14 @@ const TopArtisansPage = () => {
           
           {/* Artisan Profile Modal */}
           <ArtisanProfileModal 
-            artisan={selectedArtisan}
+            artisan={selectedArtisan ? {
+              ...selectedArtisan,
+              rating: selectedArtisan.stats.avgRating,
+              reviews: selectedArtisan.stats.reviews,
+              verified: selectedArtisan.verifiedSeller,
+              joinedDate: selectedArtisan.createdAt,
+              totalSales: selectedArtisan.stats.totalProducts * 1000 // Estimate sales
+            } : null}
             open={profileModalOpen}
             onClose={handleCloseProfile}
           />
