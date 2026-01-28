@@ -5,6 +5,11 @@ import PageLayout from '../components/PageLayout';
 import { theme } from '../theme/colors';
 import ArtisanProfileModal from '../components/ArtisanProfileModal';
 
+// API_BASE for consistent endpoint usage
+const API_BASE = window.location.hostname === 'localhost' 
+  ? 'http://localhost:8080' 
+  : 'https://bayangi-agro-market-backend-production.up.railway.app';
+
 // API types
 interface ArtisanStats {
   totalProducts: number;
@@ -43,15 +48,12 @@ const TopArtisansPage = () => {
   useEffect(() => {
     const fetchArtisans = async () => {
       try {
-        // Use production URL for deployed app, localhost for development
-        const isProduction = window.location.hostname !== 'localhost';
-        const apiUrl = isProduction 
-          ? 'https://bayangi-agro-market-backend-production.up.railway.app/api/artisans'
-          : 'http://localhost:3001/api/artisans';
+        console.log('Fetching artisans from:', `${API_BASE}/api/artisans`);
         
-        const response = await fetch(apiUrl);
+        const response = await fetch(`${API_BASE}/api/artisans`);
         if (response.ok) {
           const data = await response.json();
+          console.log('Artisans data received:', data);
           setArtisans(data);
         } else {
           console.error('Failed to fetch artisans:', response.statusText);
