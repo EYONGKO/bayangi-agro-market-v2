@@ -83,7 +83,7 @@ export async function fetchAllProducts(): Promise<Product[]> {
 }
 
 export async function createUserProduct(userId: string, input: Omit<ProductRecord, '_id'>): Promise<Product> {
-  const res = await fetch(`${API_BASE}/api/products`, {
+  const res = await fetch(`${API_BASE}/api/products/user`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
