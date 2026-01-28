@@ -100,9 +100,15 @@ export const getImageUrl = (imageId: string): string => {
     return imageId;
   }
   
-  // If it starts with / (backend path), prepend local backend URL for development
+  // If it starts with / (backend path), prepend production backend URL
   if (imageId.startsWith('/')) {
-    return `http://localhost:3001${imageId}`;
+    // Use production URL for deployed app, localhost for development
+    const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
+    const backendUrl = isProduction 
+      ? 'https://bayangi-agro-market-backend-production.up.railway.app'
+      : 'http://localhost:3001';
+    
+    return `${backendUrl}${imageId}`;
   }
   
   // Otherwise, try to find in localStorage

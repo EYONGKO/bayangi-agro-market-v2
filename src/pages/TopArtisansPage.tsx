@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Package, Search, Star, MapPin, Award, RefreshCw } from 'lucide-react';
+import { Package, Search, Star, MapPin, Award, RefreshCw } from 'lucide-react';
 import PageLayout from '../components/PageLayout';
 import { theme } from '../theme/colors';
 import ArtisanProfileModal from '../components/ArtisanProfileModal';
@@ -43,7 +43,12 @@ const TopArtisansPage = () => {
   useEffect(() => {
     const fetchArtisans = async () => {
       try {
-        const apiUrl = 'http://localhost:3001/api/artisans';
+        // Use production URL for deployed app, localhost for development
+        const isProduction = window.location.hostname !== 'localhost';
+        const apiUrl = isProduction 
+          ? 'https://bayangi-agro-market-backend-production.up.railway.app/api/artisans'
+          : 'http://localhost:3001/api/artisans';
+        
         const response = await fetch(apiUrl);
         if (response.ok) {
           const data = await response.json();
@@ -104,9 +109,9 @@ const TopArtisansPage = () => {
     // Sort artisans
     filtered.sort((a, b) => {
       if (sortBy === 'top-rated') {
-        return b.rating - a.rating;
+        return (b.stats?.avgRating || 0) - (a.stats?.avgRating || 0);
       } else {
-        return b.totalSales - a.totalSales;
+        return (b.stats?.totalProducts || 0) - (a.stats?.totalProducts || 0);
       }
     });
     
@@ -137,7 +142,12 @@ const TopArtisansPage = () => {
 
   const handleRefresh = async () => {
     try {
-      const apiUrl = 'http://localhost:3001/api/artisans';
+      // Use production URL for deployed app, localhost for development
+      const isProduction = window.location.hostname !== 'localhost';
+      const apiUrl = isProduction 
+        ? 'https://bayangi-agro-market-backend-production.up.railway.app/api/artisans'
+        : 'http://localhost:3001/api/artisans';
+      
       const response = await fetch(apiUrl);
       if (response.ok) {
         const data = await response.json();
