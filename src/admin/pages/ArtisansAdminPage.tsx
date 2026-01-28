@@ -26,12 +26,12 @@ interface DatabaseArtisan {
   stats: ArtisanStats;
 }
 
-const communities = ['Kendem', 'Mamfe', 'Membe', 'Widikum', 'Fonjo', 'Moshie/Kekpoti', 'Bamenda', 'Buea', 'Douala', 'Yaoundé', 'Kumba', 'Limbe'];
-const specialties = ['Vegetable Farming', 'Poultry Farming', 'Rice Cultivation', 'Fruit Farming', 'Livestock', 'Dairy Products', 'Honey Production', 'Fish Farming'];
+const specialties = ['Vegetable Farming', 'Poultry Farming', 'Rice Cultivation', 'Fruit Farming', 'Livestock', 'Dairy Products', 'Honey Production', 'Fish Farming', 'Handicrafts'];
 
 export default function ArtisansAdminPage() {
   const { token } = useAdminAuth();
   const [artisans, setArtisans] = useState<DatabaseArtisan[]>([]);
+  const [communities, setCommunities] = useState<string[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingArtisan, setEditingArtisan] = useState<DatabaseArtisan | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,29 +48,48 @@ export default function ArtisansAdminPage() {
     avatarFile: null as File | null
   });
 
-  // Load artisans from database API on component mount
+  // Fetch communities from database
+  const fetchCommunities = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/communities');
+      if (response.ok) {
+        const data = await response.json();
+        setCommunities(data.map((c: any) => c.name));
+      } else {
+        console.error('Failed to fetch communities');
+      }
+    } catch (error) {
+      console.error('Error fetching communities:', error);
+    }
+  };
+
+  // Load artisans and communities from database API on component mount
   useEffect(() => {
-    const fetchArtisans = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('https://bayangi-agro-market-backend-production.up.railway.app/api/artisans');
-        if (response.ok) {
-          const data = await response.json();
-          setArtisans(data);
+        // Fetch artisans
+        const artisansResponse = await fetch('http://localhost:3001/api/artisans');
+        if (artisansResponse.ok) {
+          const artisansData = await artisansResponse.json();
+          setArtisans(artisansData);
         } else {
-          console.error('Failed to fetch artisans:', response.statusText);
+          console.error('Failed to fetch artisans:', artisansResponse.statusText);
         }
+
+        // Fetch communities
+        await fetchCommunities();
       } catch (error) {
-        console.error('Error fetching artisans:', error);
+        console.error('Error fetching data:', error);
       }
     };
 
-    fetchArtisans();
+    fetchData();
   }, []);
 
   // Database API functions
   const createArtisan = async (artisanData: any) => {
     try {
-      const response = await fetch('https://bayangi-agro-market-backend-production.up.railway.app/api/users', {
+      const response = await fetch('http://localhost:3001/api/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -85,7 +104,14 @@ export default function ArtisansAdminPage() {
       
       if (response.ok) {
         const newArtisan = await response.json();
-        setArtisans([...artisans, newArtisan]);
+        const updatedArtisans = [...artisans, newArtisan];
+        setArtisans(updatedArtisans);
+        
+        // Dispatch event to notify frontend Top Artisans page
+        window.dispatchEvent(new CustomEvent('artisansUpdated', { 
+          detail: updatedArtisans 
+        }));
+        
         return newArtisan;
       } else {
         throw new Error('Failed to create artisan');
@@ -98,7 +124,7 @@ export default function ArtisansAdminPage() {
 
   const updateArtisan = async (id: string, artisanData: any) => {
     try {
-      const response = await fetch(`https://bayangi-agro-market-backend-production.up.railway.app/api/users/${id}`, {
+      const response = await fetch(`http://localhost:3001/api/users/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -110,6 +136,12 @@ export default function ArtisansAdminPage() {
       if (response.ok) {
         const updatedArtisan = await response.json();
         setArtisans(artisans.map(a => a.id === id ? updatedArtisan : a));
+        
+        // Dispatch event to notify frontend Top Artisans page
+        window.dispatchEvent(new CustomEvent('artisansUpdated', { 
+          detail: artisans.map(a => a.id === id ? updatedArtisan : a) 
+        }));
+        
         return updatedArtisan;
       } else {
         throw new Error('Failed to update artisan');
@@ -122,7 +154,7 @@ export default function ArtisansAdminPage() {
 
   const deleteArtisan = async (id: string) => {
     try {
-      const response = await fetch(`https://bayangi-agro-market-backend-production.up.railway.app/api/users/${id}`, {
+      const response = await fetch(`http://localhost:3001/api/users/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -130,7 +162,14 @@ export default function ArtisansAdminPage() {
       });
       
       if (response.ok) {
-        setArtisans(artisans.filter(a => a.id !== id));
+        const updatedArtisans = artisans.filter(a => a.id !== id);
+        setArtisans(updatedArtisans);
+        
+        // Dispatch event to notify frontend Top Artisans page
+        window.dispatchEvent(new CustomEvent('artisansUpdated', { 
+          detail: updatedArtisans 
+        }));
+        
       } else {
         throw new Error('Failed to delete artisan');
       }
@@ -139,6 +178,11 @@ export default function ArtisansAdminPage() {
       throw error;
     }
   };
+
+  // Debug form data changes
+  useEffect(() => {
+    console.log('Form data changed:', formData);
+  }, [formData]);
 
   // Listen for artisans updates from other components
   useEffect(() => {
@@ -215,22 +259,72 @@ export default function ArtisansAdminPage() {
       }
       
       try {
-        console.log('Saving image to storage...');
+        console.log('Converting image to base64...');
         
-        // Save image using the real image storage API
-        const savedImage = await saveImage(file);
+        // Convert file to base64
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          try {
+            const dataUrl = event.target?.result as string;
+            const fileExtension = file.name.split('.').pop() || 'jpg';
+            const filename = `artisan-${Date.now()}.${fileExtension}`;
+            
+            console.log('Uploading image to backend...');
+            console.log('DataUrl length:', dataUrl.length);
+            console.log('Filename:', filename);
+            console.log('File type:', file.type);
+            console.log('File extension:', fileExtension);
+            
+            // Validate dataUrl starts with data:image
+            if (!dataUrl.startsWith('data:image/')) {
+              throw new Error('Invalid image data URL');
+            }
+            
+            // Upload to backend as JSON with base64 data (without auth for testing)
+            const response = await fetch('http://localhost:3001/api/uploads/image', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+                // Temporarily remove auth to test
+                // 'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                dataUrl: dataUrl,
+                filename: filename
+              })
+            });
+            
+            console.log('Response status:', response.status);
+            console.log('Response ok:', response.ok);
+            
+            if (response.ok) {
+              const result = await response.json();
+              console.log('Image uploaded successfully:', result);
+              console.log('Setting avatar to:', result.url);
+              
+              setFormData({ 
+                ...formData, 
+                avatar: result.url, // Store the image URL from backend
+                avatarFile: file 
+              });
+              
+              console.log('Form data after update:', { ...formData, avatar: result.url });
+              
+              alert('Image uploaded successfully!');
+            } else {
+              const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+              console.error('Upload failed:', errorData);
+              console.error('Status:', response.status);
+              console.error('StatusText:', response.statusText);
+              throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+            }
+          } catch (uploadError) {
+            console.error('Error in upload process:', uploadError);
+            throw uploadError;
+          }
+        };
         
-        console.log('Image saved successfully with ID:', savedImage.id);
-        console.log('Image URL:', savedImage.data.substring(0, 50) + '...');
-        
-        setFormData({ 
-          ...formData, 
-          avatar: savedImage.id, // Store the image ID instead of blob URL
-          avatarFile: file 
-        });
-        
-        console.log('Form data updated with image ID:', savedImage.id);
-        alert('Image uploaded successfully!');
+        reader.readAsDataURL(file);
       } catch (error) {
         console.error('Error uploading image:', error);
         alert('Error uploading image. Please try again.');
@@ -238,6 +332,14 @@ export default function ArtisansAdminPage() {
     } else {
       console.log('No file selected');
     }
+  };
+
+  const handleRemoveImage = () => {
+    setFormData({ 
+      ...formData, 
+      avatar: '',
+      avatarFile: null 
+    });
   };
 
   const handleSaveArtisan = async () => {
@@ -248,10 +350,38 @@ export default function ArtisansAdminPage() {
         // Update existing artisan
         await updateArtisan(editingArtisan.id, formData);
         console.log('Artisan updated successfully');
+        
+        // Force refresh of artisans from backend to get latest data
+        const response = await fetch('http://localhost:3001/api/artisans');
+        if (response.ok) {
+          const updatedArtisans = await response.json();
+          setArtisans(updatedArtisans);
+          
+          // Dispatch event to notify frontend Top Artisans page
+          window.dispatchEvent(new CustomEvent('artisansUpdated', { 
+            detail: updatedArtisans 
+          }));
+          
+          console.log('Dispatched artisansUpdated event with updated data');
+        }
       } else {
         // Create new artisan
         await createArtisan(formData);
         console.log('New artisan added successfully');
+        
+        // Force refresh of artisans from backend to get latest data
+        const response = await fetch('http://localhost:3001/api/artisans');
+        if (response.ok) {
+          const updatedArtisans = await response.json();
+          setArtisans(updatedArtisans);
+          
+          // Dispatch event to notify frontend Top Artisans page
+          window.dispatchEvent(new CustomEvent('artisansUpdated', { 
+            detail: updatedArtisans 
+          }));
+          
+          console.log('Dispatched artisansUpdated event with new artisan data');
+        }
       }
     } catch (error) {
       console.error('Error saving artisan:', error);
@@ -266,6 +396,11 @@ export default function ArtisansAdminPage() {
     const artisan = artisans.find(a => a.id === id);
     if (artisan) {
       await updateArtisan(id, { verifiedSeller: !artisan.verifiedSeller });
+      
+      // Dispatch event to notify frontend Top Artisans page
+      window.dispatchEvent(new CustomEvent('artisansUpdated', { 
+        detail: artisans.map(a => a.id === id ? { ...a, verifiedSeller: !a.verifiedSeller } : a) 
+      }));
     }
   } catch (error) {
     console.error('Error toggling verification:', error);
@@ -307,7 +442,15 @@ export default function ArtisansAdminPage() {
               <TableRow key={artisan.id} hover>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar src={artisan.avatar} sx={{ width: 40, height: 40 }}>
+                    <Avatar 
+                  src={(() => {
+                    if (!artisan.avatar) return '';
+                    if (artisan.avatar.startsWith('http')) return artisan.avatar;
+                    if (artisan.avatar.startsWith('/')) return `http://localhost:3001${artisan.avatar}`;
+                    return `http://localhost:3001/uploads/${artisan.avatar}`;
+                  })()}
+                  sx={{ width: 40, height: 40 }}
+                >
                       {artisan.name.charAt(0)}
                     </Avatar>
                     <Box>
@@ -341,16 +484,16 @@ export default function ArtisansAdminPage() {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Star style={{ fontSize: 16, color: '#fbbf24' }} />
                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      {artisan.stats.avgRating}
+                      {artisan.stats?.avgRating || 0}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      ({artisan.stats.reviews})
+                      ({artisan.stats?.reviews || 0})
                     </Typography>
                   </Box>
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                    {artisan.stats.totalProducts} Products
+                    {artisan.stats?.totalProducts || 0} Products
                   </Typography>
                 </TableCell>
                 <TableCell>
@@ -454,7 +597,12 @@ export default function ArtisansAdminPage() {
               <Typography variant="subtitle2" sx={{ mb: 1 }}>Artisan Image</Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Avatar
-                  src={formData.avatar}
+                  src={(() => {
+                    if (!formData.avatar) return '';
+                    if (formData.avatar.startsWith('http')) return formData.avatar;
+                    if (formData.avatar.startsWith('/')) return `http://localhost:3001${formData.avatar}`;
+                    return `http://localhost:3001/uploads/${formData.avatar}`;
+                  })()}
                   sx={{ width: 80, height: 80 }}
                 >
                   {formData.name.charAt(0) || 'A'}

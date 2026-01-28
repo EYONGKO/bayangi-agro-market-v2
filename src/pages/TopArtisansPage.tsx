@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Package, Search, Star, MapPin, Award } from 'lucide-react';
+import { ArrowLeft, Package, Search, Star, MapPin, Award, RefreshCw } from 'lucide-react';
 import PageLayout from '../components/PageLayout';
 import { theme } from '../theme/colors';
 import ArtisanProfileModal from '../components/ArtisanProfileModal';
@@ -39,11 +39,11 @@ const TopArtisansPage = () => {
   const [selectedArtisan, setSelectedArtisan] = useState<Artisan | null>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
 
-  // Load artisans from backend API on component mount
+  // Load artisans from backend API on component mount and set up periodic refresh
   useEffect(() => {
     const fetchArtisans = async () => {
       try {
-        const apiUrl = 'https://bayangi-agro-market-backend-production.up.railway.app/api/artisans';
+        const apiUrl = 'http://localhost:3001/api/artisans';
         const response = await fetch(apiUrl);
         if (response.ok) {
           const data = await response.json();
@@ -56,12 +56,19 @@ const TopArtisansPage = () => {
       }
     };
 
+    // Initial fetch
     fetchArtisans();
+    
+    // Set up periodic refresh every 10 seconds for more responsive updates
+    const interval = setInterval(fetchArtisans, 10000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   // Listen for artisans updates from admin panel (for real-time updates)
   useEffect(() => {
     const handleArtisansUpdate = (event: CustomEvent) => {
+      console.log('Received artisansUpdated event:', event.detail);
       setArtisans(event.detail);
     };
 
@@ -128,6 +135,47 @@ const TopArtisansPage = () => {
     setSelectedArtisan(null);
   };
 
+  const handleRefresh = async () => {
+    try {
+      const apiUrl = 'http://localhost:3001/api/artisans';
+      const response = await fetch(apiUrl);
+      if (response.ok) {
+        const data = await response.json();
+        setArtisans(data);
+        console.log('Manually refreshed artisans data');
+      }
+    } catch (error) {
+      console.error('Error refreshing artisans:', error);
+    }
+  };
+
+  const handleTestEvent = () => {
+    console.log('Testing event dispatch...');
+    window.dispatchEvent(new CustomEvent('artisansUpdated', { 
+      detail: [
+        {
+          id: 'test-1',
+          name: 'Test Artisan',
+          email: 'test@example.com',
+          phone: '+1234567890',
+          community: 'Test Community',
+          specialty: 'Test Specialty',
+          role: 'seller',
+          verifiedSeller: true,
+          avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b6cd?w=400&h=400&fit=crop&crop=face&auto=format',
+          bio: 'Test bio',
+          createdAt: new Date().toISOString(),
+          stats: {
+            totalProducts: 5,
+            avgRating: 4.5,
+            totalLikes: 25,
+            reviews: 8
+          }
+        }
+      ]
+    }));
+  };
+
   const toCommunityId = (community: string) =>
     community
       .trim()
@@ -141,7 +189,25 @@ const TopArtisansPage = () => {
         <div className="container mx-auto px-4 py-8">
           {/* Filters */}
           <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-2xl font-bold text-gray-800">Top Artisans</h1>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleTestEvent}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                >
+                  Test Event
+                </button>
+                <button
+                  onClick={handleRefresh}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  <RefreshCw size={16} />
+                  Refresh
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -224,9 +290,9 @@ const TopArtisansPage = () => {
                     {/* Profile Image */}
                     {artisan.avatar ? (
                       <img 
-                        src={artisan.avatar.startsWith('http') || artisan.avatar.startsWith('/') 
+                        src={artisan.avatar.startsWith('http') 
                           ? artisan.avatar 
-                          : `https://bayangi-agro-market-backend-production.up.railway.app/uploads/${artisan.avatar}`
+                          : `http://localhost:3001${artisan.avatar}`
                         } 
                         alt={artisan.name}
                         className="w-full h-full object-cover"

@@ -95,9 +95,14 @@ export const deleteImage = (id: string): boolean => {
 
 // Get image URL for display
 export const getImageUrl = (imageId: string): string => {
-  // If it's a full URL or starts with /, return as-is
-  if (imageId.startsWith('http') || imageId.startsWith('/')) {
+  // If it's a full URL, return as-is
+  if (imageId.startsWith('http')) {
     return imageId;
+  }
+  
+  // If it starts with / (backend path), prepend local backend URL for development
+  if (imageId.startsWith('/')) {
+    return `http://localhost:3001${imageId}`;
   }
   
   // Otherwise, try to find in localStorage
