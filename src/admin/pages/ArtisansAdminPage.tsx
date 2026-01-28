@@ -28,6 +28,11 @@ interface DatabaseArtisan {
 
 const specialties = ['Vegetable Farming', 'Poultry Farming', 'Rice Cultivation', 'Fruit Farming', 'Livestock', 'Dairy Products', 'Honey Production', 'Fish Farming', 'Handicrafts'];
 
+// API_BASE for consistent endpoint usage
+const API_BASE = window.location.hostname === 'localhost' 
+  ? 'http://localhost:8080' 
+  : 'https://bayangi-agro-market-backend-production.up.railway.app';
+
 export default function ArtisansAdminPage() {
   const { token } = useAdminAuth();
   const [artisans, setArtisans] = useState<DatabaseArtisan[]>([]);
@@ -51,7 +56,7 @@ export default function ArtisansAdminPage() {
   // Fetch communities from database
   const fetchCommunities = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/communities');
+      const response = await fetch(`${API_BASE}/api/communities`);
       if (response.ok) {
         const data = await response.json();
         setCommunities(data.map((c: any) => c.name));
@@ -68,7 +73,7 @@ export default function ArtisansAdminPage() {
     const fetchData = async () => {
       try {
         // Fetch artisans
-        const artisansResponse = await fetch('http://localhost:3001/api/artisans');
+        const artisansResponse = await fetch(`${API_BASE}/api/artisans`);
         if (artisansResponse.ok) {
           const artisansData = await artisansResponse.json();
           setArtisans(artisansData);
@@ -89,7 +94,7 @@ export default function ArtisansAdminPage() {
   // Database API functions
   const createArtisan = async (artisanData: any) => {
     try {
-      const response = await fetch('http://localhost:3001/api/users', {
+      const response = await fetch(`${API_BASE}/api/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -124,7 +129,7 @@ export default function ArtisansAdminPage() {
 
   const updateArtisan = async (id: string, artisanData: any) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/users/${id}`, {
+      const response = await fetch(`${API_BASE}/api/users/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -154,7 +159,7 @@ export default function ArtisansAdminPage() {
 
   const deleteArtisan = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/users/${id}`, {
+      const response = await fetch(`${API_BASE}/api/users/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -244,7 +249,7 @@ export default function ArtisansAdminPage() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      console.log('Starting image upload for file:', file.name, 'size:', file.size, 'type:', file.type);
+      console.log('Processing artisan image:', file.name, 'size:', file.size, 'type:', file.type);
       
       // Validate file type
       if (!file.type.startsWith('image/')) {
@@ -252,82 +257,33 @@ export default function ArtisansAdminPage() {
         return;
       }
       
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Image file size should be less than 5MB');
-        return;
-      }
-      
       try {
         console.log('Converting image to base64...');
         
-        // Convert file to base64
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          try {
-            const dataUrl = event.target?.result as string;
-            const fileExtension = file.name.split('.').pop() || 'jpg';
-            const filename = `artisan-${Date.now()}.${fileExtension}`;
-            
-            console.log('Uploading image to backend...');
-            console.log('DataUrl length:', dataUrl.length);
-            console.log('Filename:', filename);
-            console.log('File type:', file.type);
-            console.log('File extension:', fileExtension);
-            
-            // Validate dataUrl starts with data:image
-            if (!dataUrl.startsWith('data:image/')) {
-              throw new Error('Invalid image data URL');
-            }
-            
-            // Upload to backend as JSON with base64 data (without auth for testing)
-            const response = await fetch('http://localhost:3001/api/uploads/image', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-                // Temporarily remove auth to test
-                // 'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                dataUrl: dataUrl,
-                filename: filename
-              })
-            });
-            
-            console.log('Response status:', response.status);
-            console.log('Response ok:', response.ok);
-            
-            if (response.ok) {
-              const result = await response.json();
-              console.log('Image uploaded successfully:', result);
-              console.log('Setting avatar to:', result.url);
-              
-              setFormData({ 
-                ...formData, 
-                avatar: result.url, // Store the image URL from backend
-                avatarFile: file 
-              });
-              
-              console.log('Form data after update:', { ...formData, avatar: result.url });
-              
-              alert('Image uploaded successfully!');
-            } else {
-              const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-              console.error('Upload failed:', errorData);
-              console.error('Status:', response.status);
-              console.error('StatusText:', response.statusText);
-              throw new Error(errorData.error || `Upload failed with status ${response.status}`);
-            }
-          } catch (uploadError) {
-            console.error('Error in upload process:', uploadError);
-            throw uploadError;
-          }
-        };
+        // Use same base64 approach as products and communities
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(new Error('Failed to read file'));
+          reader.readAsDataURL(file);
+        });
         
-        reader.readAsDataURL(file);
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        alert('Error uploading image. Please try again.');
+        console.log('Artisan image processed as base64:', file.name);
+        console.log('DataUrl length:', dataUrl.length);
+        
+        // Store base64 directly like products and communities (mobile compatible)
+        setFormData({ 
+          ...formData, 
+          avatar: dataUrl, // Store base64 directly
+          avatarFile: file 
+        });
+        
+        console.log('Form data after update:', { ...formData, avatar: dataUrl });
+        alert('Image processed successfully!');
+        
+      } catch (error: any) {
+        console.error('Error processing image:', error);
+        alert(`Failed to process image: ${error.message}`);
       }
     } else {
       console.log('No file selected');
@@ -352,7 +308,7 @@ export default function ArtisansAdminPage() {
         console.log('Artisan updated successfully');
         
         // Force refresh of artisans from backend to get latest data
-        const response = await fetch('http://localhost:3001/api/artisans');
+        const response = await fetch(`${API_BASE}/api/artisans`);
         if (response.ok) {
           const updatedArtisans = await response.json();
           setArtisans(updatedArtisans);
@@ -370,7 +326,7 @@ export default function ArtisansAdminPage() {
         console.log('New artisan added successfully');
         
         // Force refresh of artisans from backend to get latest data
-        const response = await fetch('http://localhost:3001/api/artisans');
+        const response = await fetch(`${API_BASE}/api/artisans`);
         if (response.ok) {
           const updatedArtisans = await response.json();
           setArtisans(updatedArtisans);
@@ -443,14 +399,19 @@ export default function ArtisansAdminPage() {
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Avatar 
-                  src={(() => {
-                    if (!artisan.avatar) return '';
-                    if (artisan.avatar.startsWith('http')) return artisan.avatar;
-                    if (artisan.avatar.startsWith('/')) return `http://localhost:3001${artisan.avatar}`;
-                    return `http://localhost:3001/uploads/${artisan.avatar}`;
-                  })()}
-                  sx={{ width: 40, height: 40 }}
-                >
+                      src={(() => {
+                        if (!artisan.avatar) return '';
+                        // Handle base64 images (new approach)
+                        if (artisan.avatar.startsWith('data:')) return artisan.avatar;
+                        // Handle HTTP URLs (old approach)
+                        if (artisan.avatar.startsWith('http')) return artisan.avatar;
+                        // Handle relative paths (old approach)
+                        if (artisan.avatar.startsWith('/')) return `${API_BASE}${artisan.avatar}`;
+                        // Handle filenames (old approach)
+                        return `${API_BASE}/uploads/${artisan.avatar}`;
+                      })()}
+                      sx={{ width: 40, height: 40 }}
+                    >
                       {artisan.name.charAt(0)}
                     </Avatar>
                     <Box>
