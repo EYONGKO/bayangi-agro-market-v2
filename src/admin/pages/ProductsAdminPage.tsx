@@ -13,6 +13,11 @@ import { createProduct, deleteProduct, listProducts, updateProduct, uploadImage,
 import { notifyProductsChanged } from '../../api/productsApi';
 import { useAdminAuth } from '../AdminAuthContext';
 
+// API_BASE for user-style endpoints
+const API_BASE = window.location.hostname === 'localhost' 
+  ? 'http://localhost:8080' 
+  : 'https://bayangi-agro-market-backend-production.up.railway.app';
+
 export default function ProductsAdminPage() {
   const { token } = useAdminAuth();
 
@@ -196,10 +201,40 @@ export default function ProductsAdminPage() {
       };
 
       if (editing) {
-        const updated = await updateProduct(token, editing._id, payload as any);
+        // Use user-style update endpoint for base64 compatibility
+        const res = await fetch(`${API_BASE}/api/products/user/${editing._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || 'Failed to update product');
+        }
+        
+        const updated = await res.json();
         setProducts((prev) => prev.map((x) => (x._id === updated._id ? updated : x)));
       } else {
-        const created = await createProduct(token, payload as any);
+        // Use user-style create endpoint for base64 compatibility
+        const res = await fetch(`${API_BASE}/api/products/user`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || 'Failed to create product');
+        }
+        
+        const created = await res.json();
         setProducts((prev) => [created, ...prev]);
       }
 
