@@ -54,9 +54,12 @@ const TopArtisansPage = () => {
         if (response.ok) {
           const data = await response.json();
           console.log('Artisans data received:', data);
+          console.log('Number of artisans:', data.length);
+          console.log('First artisan data:', data[0]);
           setArtisans(data);
         } else {
           console.error('Failed to fetch artisans:', response.statusText);
+          console.error('Response status:', response.status);
         }
       } catch (error) {
         console.error('Error fetching artisans:', error);
@@ -66,8 +69,8 @@ const TopArtisansPage = () => {
     // Initial fetch
     fetchArtisans();
     
-    // Set up periodic refresh every 10 seconds for more responsive updates
-    const interval = setInterval(fetchArtisans, 10000);
+    // Set up periodic refresh every 3 seconds for more responsive updates
+    const interval = setInterval(fetchArtisans, 3000);
     
     return () => clearInterval(interval);
   }, []);
@@ -76,7 +79,11 @@ const TopArtisansPage = () => {
   useEffect(() => {
     const handleArtisansUpdate = (event: CustomEvent) => {
       console.log('Received artisansUpdated event:', event.detail);
-      setArtisans(event.detail);
+      console.log('Event detail length:', event.detail?.length);
+      if (event.detail && Array.isArray(event.detail)) {
+        setArtisans(event.detail);
+        console.log('Updated artisans from event, count:', event.detail.length);
+      }
     };
 
     window.addEventListener('artisansUpdated', handleArtisansUpdate as EventListener);
@@ -85,6 +92,23 @@ const TopArtisansPage = () => {
       window.removeEventListener('artisansUpdated', handleArtisansUpdate as EventListener);
     };
   }, []);
+
+  // Manual refresh function
+  const handleManualRefresh = async () => {
+    try {
+      console.log('Manual refresh triggered');
+      const response = await fetch(`${API_BASE}/api/artisans`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Manual refresh - artisans data received:', data);
+        setArtisans(data);
+      } else {
+        console.error('Manual refresh failed:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Manual refresh error:', error);
+    }
+  };
 
   const filteredArtisans = useMemo(() => {
     let filtered = [...artisans];
@@ -203,21 +227,14 @@ const TopArtisansPage = () => {
           <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-2xl font-bold text-gray-800">Top Artisans</h1>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleTestEvent}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
-                >
-                  Test Event
-                </button>
-                <button
-                  onClick={handleRefresh}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                >
-                  <RefreshCw size={16} />
-                  Refresh
-                </button>
-              </div>
+              <button
+                onClick={handleManualRefresh}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                title="Refresh artisans data"
+              >
+                <RefreshCw size={16} />
+                Refresh
+              </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Search */}
@@ -295,17 +312,24 @@ const TopArtisansPage = () => {
           {/* Artisans Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredArtisans.map((artisan) => (
-              <div key={artisan.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300">
+              <div key={artisan._id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300">
                 {/* Large Profile Image Section */}
                 <div className="relative h-80">
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600">
                     {/* Profile Image */}
                     {artisan.avatar ? (
                       <img 
-                        src={artisan.avatar.startsWith('http') 
-                          ? artisan.avatar 
-                          : `http://localhost:3001${artisan.avatar}`
-                        } 
+                        src={(() => {
+                          if (!artisan.avatar) return '';
+                          // Handle base64 images (new approach)
+                          if (artisan.avatar.startsWith('data:')) return artisan.avatar;
+                          // Handle HTTP URLs (old approach)
+                          if (artisan.avatar.startsWith('http')) return artisan.avatar;
+                          // Handle relative paths (old approach)
+                          if (artisan.avatar.startsWith('/')) return `${API_BASE}${artisan.avatar}`;
+                          // Handle filenames (old approach)
+                          return `${API_BASE}/uploads/${artisan.avatar}`;
+                        })()}
                         alt={artisan.name}
                         className="w-full h-full object-cover"
                       />

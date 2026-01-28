@@ -22,9 +22,13 @@ import {
   DollarSign,
   Maximize2
 } from 'lucide-react';
-import { getImageUrl } from '../data/imageStorage';
 import { theme } from '../theme/colors';
 import type { Artisan } from '../data/artisansStore';
+
+// API_BASE for consistent endpoint usage
+const API_BASE = window.location.hostname === 'localhost' 
+  ? 'http://localhost:8080' 
+  : 'https://bayangi-agro-market-backend-production.up.railway.app';
 
 interface ArtisanProfileModalProps {
   artisan: Artisan | null;
@@ -134,7 +138,17 @@ export default function ArtisanProfileModal({ artisan, open, onClose }: ArtisanP
             {artisan.avatar ? (
               <>
                 <img
-                  src={getImageUrl(artisan.avatar)}
+                  src={(() => {
+                    if (!artisan.avatar) return '';
+                    // Handle base64 images (new approach)
+                    if (artisan.avatar.startsWith('data:')) return artisan.avatar;
+                    // Handle HTTP URLs (old approach)
+                    if (artisan.avatar.startsWith('http')) return artisan.avatar;
+                    // Handle relative paths (old approach)
+                    if (artisan.avatar.startsWith('/')) return `${API_BASE}${artisan.avatar}`;
+                    // Handle filenames (old approach)
+                    return `${API_BASE}/uploads/${artisan.avatar}`;
+                  })()}
                   alt={artisan.name}
                   style={{
                     width: '100%',
@@ -381,7 +395,17 @@ export default function ArtisanProfileModal({ artisan, open, onClose }: ArtisanP
           }}>
             {artisan?.avatar && (
               <img
-                src={getImageUrl(artisan.avatar)}
+                src={(() => {
+                  if (!artisan.avatar) return '';
+                  // Handle base64 images (new approach)
+                  if (artisan.avatar.startsWith('data:')) return artisan.avatar;
+                  // Handle HTTP URLs (old approach)
+                  if (artisan.avatar.startsWith('http')) return artisan.avatar;
+                  // Handle relative paths (old approach)
+                  if (artisan.avatar.startsWith('/')) return `${API_BASE}${artisan.avatar}`;
+                  // Handle filenames (old approach)
+                  return `${API_BASE}/uploads/${artisan.avatar}`;
+                })()}
                 alt={artisan.name}
                 style={{
                   maxWidth: '100%',
