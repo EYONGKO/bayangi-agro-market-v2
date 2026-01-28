@@ -6,14 +6,19 @@ import { theme } from '../theme/colors';
 import ArtisanProfileModal from '../components/ArtisanProfileModal';
 
 // API_BASE for consistent endpoint usage
-const API_BASE = window.location.hostname === 'localhost' 
-  ? 'http://localhost:8080' 
-  : 'https://bayangi-agro-market-backend-production.up.railway.app';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 
+  (window.location.hostname === 'localhost' 
+    ? 'http://localhost:8080' 
+    : 'https://bayangi-agro-market-backend-production.up.railway.app');
 
 // Version to force Vercel deployment - 2025-01-28-13:55
 const APP_VERSION = '1.2.1';
 
-console.log('TopArtisansPage loaded - Version:', APP_VERSION);
+console.log('=== API CONNECTION DEBUG ===');
+console.log('Environment VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
+console.log('Final API_BASE being used:', API_BASE);
+console.log('Window hostname:', window.location.hostname);
+console.log('===========================');
 
 // API types
 interface ArtisanStats {
