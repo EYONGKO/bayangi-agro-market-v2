@@ -1,5 +1,6 @@
-/** In dev, use '' so /api requests hit Vite proxy → backend. Set VITE_API_URL for production or no proxy. */
-const API_BASE = (import.meta as any).env?.VITE_API_URL ?? '';
+/** In dev, use local backend. In production, use Railway backend. */
+const API_BASE = (import.meta as any).env?.VITE_API_URL || 
+  (window.location.hostname === 'localhost' ? 'http://localhost:8080' : 'https://bayangi-agro-market-backend-production.up.railway.app');
 
 export type ApiUser = { id: string; email: string; name: string };
 

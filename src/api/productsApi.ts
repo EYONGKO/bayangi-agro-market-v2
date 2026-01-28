@@ -1,6 +1,8 @@
 import type { Product } from '../context/CartContext';
 
-const API_BASE = (import.meta as any).env?.VITE_API_URL ?? '';
+// Use production Railway URL when not in development, otherwise use local backend
+const API_BASE = (import.meta as any).env?.VITE_API_URL || 
+  (window.location.hostname === 'localhost' ? 'http://localhost:8080' : 'https://bayangi-agro-market-backend-production.up.railway.app');
 
 const PRODUCTS_CHANGED_EVENT = 'local-roots-products-changed';
 
