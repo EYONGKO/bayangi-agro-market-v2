@@ -11,6 +11,11 @@ import {
 import { useAdminAuth } from '../AdminAuthContext';
 import AdminImagePicker from '../components/AdminImagePicker';
 
+// API_BASE for user-style endpoints
+const API_BASE = window.location.hostname === 'localhost' 
+  ? 'http://localhost:8080' 
+  : 'https://bayangi-agro-market-backend-production.up.railway.app';
+
 const DEFAULT_COMMUNITIES = [
   { name: 'Kendem', slug: 'kendem', description: 'Handcrafted goods and artisan stories', image: '/kendem-hero.jpg' },
   { name: 'Mamfe', slug: 'mamfe', description: 'Sustainable agriculture and farm produce', image: '/mamfe-hero.jpg' },
@@ -81,13 +86,49 @@ export default function CommunitiesAdminPage() {
       if (!form.name.trim()) throw new Error('Name is required');
 
       if (editing) {
-        await updateCommunity(token, editing._id, {
-          name: form.name,
-          description: form.description,
-          image: form.image
+        // Use user-style update endpoint for base64 compatibility
+        const res = await fetch(`${API_BASE}/api/communities/user/${editing._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name: form.name,
+            description: form.description,
+            image: form.image
+          })
         });
+        
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || 'Failed to update community');
+        }
+        
+        const updated = await res.json();
+        setItems((prev) => prev.map((x) => (x._id === updated._id ? updated : x)));
       } else {
-        await createCommunity(token, { name: form.name, description: form.description, image: form.image });
+        // Use user-style create endpoint for base64 compatibility
+        const res = await fetch(`${API_BASE}/api/communities/user`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name: form.name,
+            description: form.description,
+            image: form.image
+          })
+        });
+        
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || 'Failed to create community');
+        }
+        
+        const created = await res.json();
+        setItems((prev) => [created, ...prev]);
       }
 
       setEditorOpen(false);

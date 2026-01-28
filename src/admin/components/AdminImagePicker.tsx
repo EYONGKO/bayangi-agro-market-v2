@@ -35,14 +35,17 @@ export default function AdminImagePicker({
     setError(null);
     setUploading(true);
     try {
+      // Use same base64 approach as user uploads
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const r = new FileReader();
         r.onload = () => resolve(String(r.result));
         r.onerror = () => reject(new Error('Failed to read file'));
         r.readAsDataURL(file);
       });
-      const { url } = await uploadImage(token, { dataUrl, filename: file.name });
-      onChange(url);
+      
+      // Store base64 directly like user uploads (mobile compatible)
+      console.log('Community image processed as base64:', file.name);
+      onChange(dataUrl);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
